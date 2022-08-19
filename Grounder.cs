@@ -66,8 +66,9 @@ namespace Locomotion.Utils.Grounder
         //for blending/lerping since values get reset every frame in animation cycle
         private Vector3 _lastPelvisPosition;
 
-        private Vector3 _lastIkPositionL;
-        private Vector3 _lastIkPositionR;
+        //just the y component
+        private float _lastIkPositionL;
+        private float _lastIkPositionR;
 
         private Quaternion _lastIkRotationL;
         private Quaternion _lastIkRotationR;
@@ -94,10 +95,6 @@ namespace Locomotion.Utils.Grounder
 
         private void Update()
         {
-            ikRig.weight = active ? 1f : 0f;
-
-            if (!active) return;
-            
             //Get all original Bone Positions
             Vector3 pelvisPosition = extractConstraintPelvis.data.position;
             pelvisPosition.y += pelvisOffset;
@@ -107,6 +104,21 @@ namespace Locomotion.Utils.Grounder
 
             Quaternion boneRotationL = extractConstraintL.data.rotation;
             Quaternion boneRotationR = extractConstraintR.data.rotation;
+            
+            ikRig.weight = active ? 1f : 0f;
+
+            if (!active)
+            {
+                _lastPelvisPosition = pelvisPosition;
+
+                _lastIkPositionL = bonePositionL.y;
+                _lastIkPositionR = bonePositionR.y;
+
+                _lastIkRotationL = boneRotationL;
+                _lastIkRotationR = boneRotationR;
+                
+                return;
+            }
 
             //left Foot Raycast
             Vector3 originL = bonePositionL;
@@ -180,12 +192,14 @@ namespace Locomotion.Utils.Grounder
             pelvis.position = _lastPelvisPosition;
         }
         
-        private void ApplyIkPosition(ref Vector3 lastIkPosition, ref TwoBoneIKConstraint ikConstraint, Vector3 bonePosition, float t)
+        private void ApplyIkPosition(ref float lastIkPosition, ref TwoBoneIKConstraint ikConstraint, Vector3 bonePosition, float t)
         {
             //ik position R
-            lastIkPosition = Vector3.Lerp(lastIkPosition, bonePosition, t);
+            lastIkPosition = Mathf.Lerp(lastIkPosition, bonePosition.y, t);
 
-            ikConstraint.data.target.position = lastIkPosition;
+            bonePosition.y = lastIkPosition;
+            
+            ikConstraint.data.target.position = bonePosition;
         }
         
         private void ApplyIkRotation(ref Quaternion lastIkRotation, ref TwoBoneIKConstraint ikConstraint, Quaternion boneRotation, float t)
